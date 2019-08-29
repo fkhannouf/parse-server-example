@@ -1,11 +1,11 @@
-// Example express application adding the parse-server module to expose Parse
-// compatible API routes.
-
-const express = require('express');
-const { default: ParseServer, ParseGraphQLServer } = require('parse-server');
-var path = require('path');
-
-const databaseUri = process.env.MONGODB_ADDON_URI || process.env.MONGODB_URI;
+const 
+express = require('express'),
+path = require('path'),
+{ default: ParseServer, ParseGraphQLServer } = require('parse-server')
+parseMountPath = process.env.PARSE_MOUNT || '/parse',
+databaseUri = process.env.MONGODB_ADDON_URI || process.env.MONGODB_URI,
+app = express()
+;
 
 if (!databaseUri) {
   console.log('DATABASE_URI not specified, falling back to localhost.');
@@ -30,38 +30,20 @@ const parseGraphQLServer = new ParseGraphQLServer(
   }
 );
 
-// Client-keys like the javascript key or the .NET key are not necessary with parse-server
-// If you wish you require them, you can set them as options in the initialization above:
-// javascriptKey, restAPIKey, dotNetKey, clientKey
-
-const app = express();
-
 // Serve static assets from the /public folder
 app.use('/public', express.static(path.join(__dirname, '/public')));
 
-// Serve the Parse API on the /parse URL prefix
-const mountPath = process.env.PARSE_MOUNT || '/parse';
-app.use(mountPath, parseServer);
+// Mounts the REST API
+app.use(parseMountPath, parseServer.app);
 
-parseGraphQLServer.applyGraphQL(app); // Mounts the GraphQL API
-parseGraphQLServer.applyPlayground(app); // (Optional) Mounts the GraphQL Playground - do NOT use in Production
+// Mounts the GraphQL API
+parseGraphQLServer.applyGraphQL(app);
 
-// Parse Server plays nicely with the rest of your web routes
-app.get('/', function(req, res) {
-  res.status(200).send('I dream of being a website.  Please star the parse-server repo on GitHub!');
+// Mounts the GraphQL Playground - do NOT use in Production
+parseGraphQLServer.applyPlayground(app);
+
+app.listen(1337, function() {
+  console.log('REST API running on http://localhost:1337/parse');
+  console.log('GraphQL API running on http://localhost:1337/graphql');
+  console.log('GraphQL Playground running on http://localhost:1337/playground');
 });
-
-// There will be a test page available on the /test path of your server url
-// Remove this before launching your app
-app.get('/test', function(req, res) {
-  res.sendFile(path.join(__dirname, '/public/test.html'));
-});
-
-var port = process.env.PORT || 1337;
-var httpServer = require('http').createServer(app);
-httpServer.listen(port, function() {
-    console.log('parse-server-example running on port ' + port + '.');
-});
-
-// This will enable the Live Query real-time server
-ParseServer.createLiveQueryServer(httpServer);
