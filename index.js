@@ -3,6 +3,7 @@ express = require('express'),
 path = require('path'),
 { default: ParseServer, ParseGraphQLServer } = require('parse-server')
 parseMountPath = process.env.PARSE_MOUNT || '/parse',
+port = process.env.PORT || 1337,
 databaseUri = process.env.MONGODB_ADDON_URI || process.env.MONGODB_URI,
 app = express()
 ;
@@ -42,7 +43,7 @@ parseGraphQLServer.applyGraphQL(app);
 // Mounts the GraphQL Playground - do NOT use in Production
 parseGraphQLServer.applyPlayground(app);
 
-app.listen(1337, function() {
+app.listen(port, function() {
   console.log('REST API running on http://localhost:1337/parse');
   console.log('GraphQL API running on http://localhost:1337/graphql');
   console.log('GraphQL Playground running on http://localhost:1337/playground');
