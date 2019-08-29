@@ -1,17 +1,17 @@
 // Example express application adding the parse-server module to expose Parse
 // compatible API routes.
 
-var express = require('express');
-var ParseServer = require('parse-server').ParseServer;
+const express = require('express');
+const { default: ParseServer, ParseGraphQLServer } = require('parse-server');
 var path = require('path');
 
-var databaseUri = process.env.MONGODB_ADDON_URI || process.env.MONGODB_URI;
+const databaseUri = process.env.MONGODB_ADDON_URI || process.env.MONGODB_URI;
 
 if (!databaseUri) {
   console.log('DATABASE_URI not specified, falling back to localhost.');
 }
 
-var api = new ParseServer({
+const parseServer = new ParseServer({
   databaseURI: process.env.MONGODB_ADDON_URI || 'mongodb://localhost:27017/dev',
   cloud: process.env.CLOUD_CODE_MAIN || __dirname + '/cloud/main.js',
   appId: process.env.PARSE_APPID || 'myAppId',
@@ -21,18 +21,30 @@ var api = new ParseServer({
     classNames: ["Posts", "Comments"] // List of classes to support for query subscriptions
   }
 });
+
+const parseGraphQLServer = new ParseGraphQLServer(
+  parseServer,
+  {
+    graphQLPath: '/graphql',
+    playgroundPath: '/playground'
+  }
+);
+
 // Client-keys like the javascript key or the .NET key are not necessary with parse-server
 // If you wish you require them, you can set them as options in the initialization above:
 // javascriptKey, restAPIKey, dotNetKey, clientKey
 
-var app = express();
+const app = express();
 
 // Serve static assets from the /public folder
 app.use('/public', express.static(path.join(__dirname, '/public')));
 
 // Serve the Parse API on the /parse URL prefix
-var mountPath = process.env.PARSE_MOUNT || '/parse';
-app.use(mountPath, api);
+const mountPath = process.env.PARSE_MOUNT || '/parse';
+app.use(mountPath, parseServer);
+
+parseGraphQLServer.applyGraphQL(app); // Mounts the GraphQL API
+parseGraphQLServer.applyPlayground(app); // (Optional) Mounts the GraphQL Playground - do NOT use in Production
 
 // Parse Server plays nicely with the rest of your web routes
 app.get('/', function(req, res) {
